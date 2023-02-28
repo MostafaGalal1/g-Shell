@@ -2,7 +2,7 @@
 
 ## Description
 
-Unix shell program with same functionalities of the conventional terminal which contains the basic set of commands introduced in terminal.
+Unix shell program with same functionalities of the conventional terminal containing the basic set of commands introduced in terminal.
 
 ## Specification
 Implemented using c language along with unistd ans sys libraries
