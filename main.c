@@ -4,7 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-void parse(char *argv[], char command[]){
+FILE *fp;
+
+void parser(char *argv[], char command[]){
     int argc = 10;
     char *arg = strtok(command, " ");
 
@@ -16,6 +18,11 @@ void parse(char *argv[], char command[]){
             argv[i] = NULL;
         }
     }
+}
+
+void handler() {
+    while (waitpid((pid_t)(-1), 0, WNOHANG) > 0) {}
+    fprintf(fp, "Child process was terminated\n");
 }
 
 void cd_command(char *arguments[], char prevdir[]){
@@ -71,8 +78,9 @@ void echo_command(char *arguments[]){
 
 int main() {
 
-    FILE *fp;
     char prevdir[256] = {'\0'};
+    signal(SIGCHLD, handler);
+
     fp = fopen ("gShell.log", "w");
 
     while (1){
@@ -80,14 +88,12 @@ int main() {
         char command[256];
         char *arguments[10];
 
-        printf("shell %d\n", getpid());
-        printf("command: ");
+        printf("g-Shell > ");
         scanf("%[^\n]%*c", command);
 
-        parse(arguments, command);
+        parser(arguments, command);
 
         if (!strcmp(arguments[0], "exit")) {
-            printf("exiting\n");
             exit(0);
         } else if (!strcmp(arguments[0], "cd")) {
             cd_command(arguments, prevdir);
@@ -105,14 +111,20 @@ int main() {
             perror("fork");
             exit(EXIT_FAILURE);
         } else if (childPid == 0) {
-            printf("child %d", getpid());
-            execvp(arguments[0], arguments);
-        } else {
-            int state;
-            waitpid(childPid, &state, 0);
+            if (arguments[1] && !strcmp(arguments[1], "&")) {
+                arguments[1] = NULL;
+                printf("process: %d", getpid());
+            }
 
-            printf("State %d\n", state);
-            fprintf(fp, "command terminates");
+            if (execvp(arguments[0], arguments) < 0){
+                perror("exec");
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            if (arguments[1] && !strcmp(arguments[1], "&"))
+                continue;
+
+            waitpid(childPid, 0, 0);
         }
     }
 }
