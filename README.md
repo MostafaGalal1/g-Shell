@@ -4,6 +4,7 @@
 
 Unix shell program with same functionalities of the conventional terminal containing the basic set of commands introduced in terminal.
 
+
 ## Specification
 Implemented using c language along with unistd ans sys libraries
 
@@ -22,6 +23,7 @@ The following table shows the current set of commands supported by the shell:
 | find | -H, -L Path | locates files based on some user-specified criteria |
 | echo | $Variable | Displays a line of string that is passed as the arguments or value of an environment variable |
 | Process name | & | Runs the process as a backgroud process |
+
 
 ## References
 https://www.geeksforgeeks.org/create-processes-with-fork-in-cpp/
