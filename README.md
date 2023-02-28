@@ -5,7 +5,7 @@
 Unix shell program with same functionalities of the conventional terminal which contains the basic set of commands introduced in terminal.
 
 ## Specification
-Implemented using c language with unistd ans sys libraries
+Implemented using c language along with unistd ans sys libraries
 
 
 The following table shows the current set of commands supported by the shell:
