@@ -6,6 +6,7 @@
 
 #define MAX_LENGTH 256
 #define MAX_ARGS 10
+#define SLEEPING 100
 #define LOG_FILE_NAME "g-Shell.log"
 #define HISTORY_FILE_NAME "History.log"
 
@@ -75,6 +76,7 @@ void cd_command(char *argv[]){
     getcwd(tmpdir, sizeof(tmpdir));
     if (chdir(curdir)) {
         perror("cd");
+        usleep(SLEEPING * 1000);
         return;
     }
 
@@ -134,6 +136,7 @@ int main() {
             echo_command(argv);
         else {
             childPid = fork();
+            
             if (childPid < 0) {
                 perror("fork");
                 exit(EXIT_FAILURE);
@@ -145,6 +148,7 @@ int main() {
 
                 execvp(argv[0], argv);
                 perror("exec");
+                usleep(SLEEPING * 1000);
                 exit(0);
             } else {
                 if (argv[1] && !strcmp(argv[1], "&"))
