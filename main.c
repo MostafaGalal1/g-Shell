@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MAX_LENGTH 256
+#define MAX_ARGS 10
+
 FILE *fp;
 
 /*
@@ -11,15 +14,14 @@ parser: parses command entered by the user.
 Since max number of arguments allowed in terminal the arguments array is of size 10.
 */
 void parser(char *argv[], char command[]){
-    int argc = 10;
     char *arg = strtok(command, " ");
 
-    for (int i = 0; i < argc; ++i) {
+    for (int argc = 0; i < MAX_ARGS; ++argc) {
         if (arg) {
-            argv[i] = arg;
+            argv[argc] = arg;
             arg = strtok(NULL, " ");
         } else {
-            argv[i] = NULL;
+            argv[argc] = NULL;
         }
     }
 }
@@ -38,7 +40,7 @@ void handler() {
 cd_command: built-in cd command for handling user command to navigate between different directories. 
 */
 void cd_command(char *arguments[], char prevdir[]){
-    char *curdir, dir[256], tmpdir[256];
+    char *curdir, dir[MAX_LENGTH], tmpdir[MAX_LENGTH];
 
     if (!arguments[1] || !strcmp(arguments[1], "~")){
         curdir = getenv("HOME");
@@ -68,7 +70,7 @@ void cd_command(char *arguments[], char prevdir[]){
 export_command: built-in export command for hdefining environment variables and using them in child processes.
 */
 void export_command(char *arguments[]){
-    char name[128], value[128];
+    char name[MAX_LENGTH/2], value[MAX_LENGTH/2];
     char *ptr = strrchr(arguments[1], '='), *end = strchr(arguments[1], '\0');
     memcpy(name, arguments[1], (ptr - arguments[1]) * sizeof(char));
     memcpy(value, ptr+1, (end - (ptr+1)) * sizeof(char));
@@ -99,53 +101,52 @@ Driver code.
 */
 int main() {
 
-    char prevdir[256] = {'\0'};
+    char prevdir[MAX_LENGTH] = {'\0'};
     signal(SIGCHLD, handler);
 
-    fp = fopen ("gShell.log", "w");
+    fp = fopen ("g-Shell.log", "w");
 
     while (1){
         pid_t childPid;
-        char command[256];
-        char *arguments[10];
+        char command[MAX_COMMAND_LENGTH];
+        char *arguments[MAX_ARGS];
 
         printf("g-Shell > ");
-        scanf("%[^\n]%*c", command);
+        fgets(command, MAX_COMMAND_LENGTH, stdin);
+        command[strcspn(command, "\n")] = '\0';
 
         parser(arguments, command);
 
         if (!strcmp(arguments[0], "exit")) {
             exit(0);
-        } else if (!strcmp(arguments[0], "cd")) {
+        }
+        
+        if (!strcmp(arguments[0], "cd")) {
             cd_command(arguments, prevdir);
-            continue;
         } else if (!strcmp(arguments[0], "export")) {
             export_command(arguments);
-            continue;
         } else if (!strcmp(arguments[0], "echo")) {
             echo_command(arguments);
-            continue;
-        }
+        } else {
+            childPid = fork();
+            if (childPid < 0) {
+                perror("fork");
+                exit(EXIT_FAILURE);
+            } else if (childPid == 0) {
+                if (arguments[1] && !strcmp(arguments[1], "&")) {
+                    arguments[1] = NULL;
+                    printf("process: %d", getpid());
+                }
 
-        childPid = fork();
-        if (childPid < 0) {
-            perror("fork");
-            exit(EXIT_FAILURE);
-        } else if (childPid == 0) {
-            if (arguments[1] && !strcmp(arguments[1], "&")) {
-                arguments[1] = NULL;
-                printf("process: %d", getpid());
-            }
-
-            if (execvp(arguments[0], arguments) < 0){
+                execvp(arguments[0], arguments)
                 perror("exec");
                 exit(EXIT_FAILURE);
-            }
-        } else {
-            if (arguments[1] && !strcmp(arguments[1], "&"))
-                continue;
+            } else {
+                if (arguments[1] && !strcmp(arguments[1], "&"))
+                    continue;
 
-            waitpid(childPid, 0, 0);
+                waitpid(childPid, 0, 0);
+            }
         }
     }
 }
