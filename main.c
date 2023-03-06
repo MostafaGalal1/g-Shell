@@ -59,17 +59,20 @@ void cd_command(char *argv[]){
 void export_command(char *argv[]){
     char *name, *value;
     for (int i = 1; argv[i] != NULL; ++i) {
-        value = strchr(argv[i], '=');
-        *value = '\0';
-        name = argv[i], value++;
-        setenv(name, value, 1);
+        if ((value = strchr(argv[i], '=')) != NULL) {
+            *value = '\0';
+            name = argv[i], value++;
+            setenv(name, value, 1);
+        }
     }
 }
+
 void echo_command(char *argv[]){
     for (int i = 1; argv[i] != NULL; ++i)
         printf("%s ", argv[i]);
     printf("\n");
 }
+
 void history_command(){
     FILE *hist;
     char * line = NULL;
@@ -133,12 +136,18 @@ void record_input(char command[]){
     fclose(hist);
 }
 void parse_input(char command[], char *argv[]){
-    char *arg = strtok(command, " ");
-
     int argc = 0;
+    int len = (int)strlen(command);
+    char *arg = strtok(command, " "), *ind;
+
     while (argc < MAX_ARGS && arg != NULL) {
         argv[argc++] = arg;
         arg = strtok(NULL, " ");
+        if (arg && (ind = strchr(arg, '"')) != NULL) {
+            *(arg + strlen(arg)) = ' ';
+            memmove(ind, ind+1, len - (ind - command));
+            arg = strtok(arg, "\"");
+        }
     }
 }
 
@@ -147,6 +156,7 @@ input_type evaluate_input(char *input){
         return shell_builtin;
     return executable_or_error;
 }
+
 command_type evaluate_command(char *input){
     if (!strcmp(input, "cd"))
         return cd;
@@ -164,6 +174,20 @@ void evaluate_expression(char *argv[]){
             *argv[i] = '\n';
             argv[i]++;
             argv[i] = getenv(argv[i]);
+        }
+    }
+}
+
+void compose_arguments(char *args[], char *argv[]) {
+    int argc = 1;
+    char *arg;
+
+    args[0] = argv[0];
+    for (int i = 1; i < MAX_ARGS && argv[i]; ++i) {
+        arg = strtok(argv[i], " ");
+        while (argc < MAX_LENGTH && arg != NULL) {
+            args[argc++] = arg;
+            arg = strtok(NULL, " ");
         }
     }
 }
@@ -193,12 +217,16 @@ void execute_command(char *argv[]) {
     if (childPid < 0) {
         error_message("fork");
     } else if (childPid == 0) {
+        char *args[MAX_LENGTH] = {};
+
         if (argv[1] && !strcmp(argv[1], "&")) {
             argv[1] = NULL;
             printf("process: %d", getpid());
         }
 
-        execvp(argv[0], argv);
+        compose_arguments(args, argv);
+
+        execvp(args[0], args);
         error_message("execvp");
     } else {
         if (argv[1] && !strcmp(argv[1], "&"))
