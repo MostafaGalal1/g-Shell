@@ -7,8 +7,8 @@
 #define MAX_LENGTH 256
 #define MAX_ARGS 10
 #define SLEEPING 200
-#define LOG_FILE_NAME "/home/mostafa-galal/CLionProjects/os_lab1/g-Shell.log"
-#define HISTORY_FILE_NAME "/home/mostafa-galal/CLionProjects/os_lab1/History.log"
+#define LOG_FILE_DIR "/home/mostafa-galal/CLionProjects/os_lab1/g-Shell.log"
+#define HISTORY_FILE_DIR "/home/mostafa-galal/CLionProjects/os_lab1/History.log"
 
 typedef enum {
     shell_builtin,
@@ -25,7 +25,6 @@ typedef enum {
 void error_message(char error[]){
     perror(error);
     usleep(SLEEPING * 1000);
-    exit(0);
 }
 
 void cd_command(char *argv[]){
@@ -34,11 +33,6 @@ void cd_command(char *argv[]){
 
     if (!argv[1] || !strcmp(argv[1], "~")){
         curdir = getenv("HOME");
-    } else if (!strcmp(argv[1], "..")) {
-        getcwd(dir, sizeof(dir));
-        char *ptr = strrchr(dir, '/');
-        dir[ptr - dir + (dir == ptr ? 1 : 0)] = '\0';
-        curdir = dir;
     } else if (!strcmp(argv[1], "-")) {
         memcpy(dir, prevdir, sizeof(dir));
         curdir = dir;
@@ -49,8 +43,7 @@ void cd_command(char *argv[]){
 
     getcwd(tmpdir, sizeof(tmpdir));
     if (chdir(curdir)) {
-        perror("cd");
-        usleep(SLEEPING * 1000);
+        error_message("cd");
         return;
     }
 
@@ -78,7 +71,7 @@ void history_command(){
     char * line = NULL;
     size_t len = 0;
 
-    hist = fopen(HISTORY_FILE_NAME, "r");
+    hist = fopen(HISTORY_FILE_DIR, "r");
     if (hist == NULL)
         return;
 
@@ -96,7 +89,7 @@ void reap_child_zombie(){
 void write_to_log_file(char line[]){
     FILE *log;
 
-    log = fopen(LOG_FILE_NAME, "a");
+    log = fopen(LOG_FILE_DIR, "a");
     if (log == NULL)
         return;
 
@@ -114,10 +107,7 @@ void register_child_signal(void (*on_child_exit)(int)) {
 }
 
 void setup_environment() {
-    char dir[MAX_LENGTH];
-
-    getcwd(dir, sizeof(dir));
-    chdir(dir);
+    chdir(getenv("PWD"));
 }
 
 void read_input(char *command){
@@ -128,7 +118,7 @@ void read_input(char *command){
 void record_input(char command[]){
     FILE *hist;
 
-    hist = fopen(HISTORY_FILE_NAME, "a+");
+    hist = fopen(HISTORY_FILE_DIR, "a+");
     if (hist == NULL)
         return;
 
@@ -228,6 +218,7 @@ void execute_command(char *argv[]) {
 
         execvp(args[0], args);
         error_message("execvp");
+        exit(0);
     } else {
         if (argv[1] && !strcmp(argv[1], "&"))
             return;
@@ -237,7 +228,7 @@ void execute_command(char *argv[]) {
 }
 
 void shell(){
-    int done = 1;
+    int _exit = 1;
 
     do {
         input_type type;
@@ -252,7 +243,7 @@ void shell(){
         type = evaluate_input(argv[0]);
 
         if (argv[0] && !strcmp(argv[0], "exit")) {
-            done = 0;
+            _exit = 0;
             continue;
         }
 
@@ -264,7 +255,7 @@ void shell(){
                 execute_command(argv);
                 break;
         }
-    } while (done);
+    } while (_exit);
 
     exit(0);
 }
